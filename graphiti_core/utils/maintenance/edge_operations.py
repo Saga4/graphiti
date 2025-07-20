@@ -339,31 +339,39 @@ async def resolve_extracted_edges(
 def resolve_edge_contradictions(
     resolved_edge: EntityEdge, invalidation_candidates: list[EntityEdge]
 ) -> list[EntityEdge]:
-    if len(invalidation_candidates) == 0:
+    if not invalidation_candidates:
         return []
 
     # Determine which contradictory edges need to be expired
     invalidated_edges: list[EntityEdge] = []
+    utc_cache = None  # cache utc_now() result to use within this function call if needed
+
+    resolved_valid = resolved_edge.valid_at
+    resolved_invalid = resolved_edge.invalid_at
+
+    # Optimized loop
     for edge in invalidation_candidates:
+        edge_invalid = edge.invalid_at
+        edge_valid = edge.valid_at
+
         # (Edge invalid before new edge becomes valid) or (new edge invalid before edge becomes valid)
         if (
-            edge.invalid_at is not None
-            and resolved_edge.valid_at is not None
-            and edge.invalid_at <= resolved_edge.valid_at
+            edge_invalid is not None
+            and resolved_valid is not None
+            and edge_invalid <= resolved_valid
         ) or (
-            edge.valid_at is not None
-            and resolved_edge.invalid_at is not None
-            and resolved_edge.invalid_at <= edge.valid_at
+            edge_valid is not None
+            and resolved_invalid is not None
+            and resolved_invalid <= edge_valid
         ):
             continue
         # New edge invalidates edge
-        elif (
-            edge.valid_at is not None
-            and resolved_edge.valid_at is not None
-            and edge.valid_at < resolved_edge.valid_at
-        ):
-            edge.invalid_at = resolved_edge.valid_at
-            edge.expired_at = edge.expired_at if edge.expired_at is not None else utc_now()
+        elif edge_valid is not None and resolved_valid is not None and edge_valid < resolved_valid:
+            edge.invalid_at = resolved_valid
+            if edge.expired_at is None:
+                if utc_cache is None:
+                    utc_cache = utc_now()
+                edge.expired_at = utc_cache
             invalidated_edges.append(edge)
 
     return invalidated_edges
