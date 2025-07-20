@@ -61,22 +61,21 @@ MAX_QUERY_LENGTH = 32
 
 
 def fulltext_query(query: str, group_ids: list[str] | None = None):
-    group_ids_filter_list = (
-        [f'group_id:"{lucene_sanitize(g)}"' for g in group_ids] if group_ids is not None else []
-    )
-    group_ids_filter = ''
-    for f in group_ids_filter_list:
-        group_ids_filter += f if not group_ids_filter else f' OR {f}'
-
-    group_ids_filter += ' AND ' if group_ids_filter else ''
+    # Build the group filter part using efficient list comprehension and join
+    if group_ids:
+        group_ids_filter_list = [f'group_id:"{lucene_sanitize(g)}"' for g in group_ids]
+        group_ids_filter = ' OR '.join(group_ids_filter_list)
+        if group_ids_filter:
+            group_ids_filter += ' AND '
+    else:
+        group_ids_filter = ''
 
     lucene_query = lucene_sanitize(query)
     # If the lucene query is too long return no query
-    if len(lucene_query.split(' ')) + len(group_ids or '') >= MAX_QUERY_LENGTH:
+    if len(lucene_query.split(' ')) + (len(group_ids) if group_ids else 0) >= MAX_QUERY_LENGTH:
         return ''
 
-    full_query = group_ids_filter + '(' + lucene_query + ')'
-
+    full_query = f'{group_ids_filter}({lucene_query})'
     return full_query
 
 
@@ -1106,3 +1105,34 @@ async def get_embeddings_for_edges(
             embeddings_dict[uuid] = embedding
 
     return embeddings_dict
+
+
+_LUCENE_ESCAPE_MAP = str.maketrans(
+    {
+        '+': r'\+',
+        '-': r'\-',
+        '&': r'\&',
+        '|': r'\|',
+        '!': r'\!',
+        '(': r'\(',
+        ')': r'\)',
+        '{': r'\{',
+        '}': r'\}',
+        '[': r'\[',
+        ']': r'\]',
+        '^': r'\^',
+        '"': r'\"',
+        '~': r'\~',
+        '*': r'\*',
+        '?': r'\?',
+        ':': r'\:',
+        '\\': r'\\',
+        '/': r'\/',
+        'O': r'\O',
+        'R': r'\R',
+        'N': r'\N',
+        'T': r'\T',
+        'A': r'\A',
+        'D': r'\D',
+    }
+)
