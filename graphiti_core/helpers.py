@@ -90,9 +90,13 @@ def lucene_sanitize(query: str) -> str:
 
 
 def normalize_l2(embedding: list[float]) -> NDArray:
-    embedding_array = np.array(embedding)
-    norm = np.linalg.norm(embedding_array, 2, axis=0, keepdims=True)
-    return np.where(norm == 0, embedding_array, embedding_array / norm)
+    # Convert directly to float64 and flatten in one step for speed
+    embedding_array = np.asarray(embedding, dtype=np.float64)
+    norm = np.sqrt(np.dot(embedding_array, embedding_array))
+    # Avoid np.where for scalar norm; just check and branch
+    if norm == 0:
+        return embedding_array
+    return embedding_array / norm
 
 
 # Use this instead of asyncio.gather() to bound coroutines
