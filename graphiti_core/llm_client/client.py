@@ -40,12 +40,14 @@ logger = logging.getLogger(__name__)
 
 
 def is_server_or_retry_error(exception):
-    if isinstance(exception, RateLimitError | json.decoder.JSONDecodeError):
+    if isinstance(exception, _RATE_LIMIT_OR_JSON_ERROR):
         return True
 
-    return (
-        isinstance(exception, httpx.HTTPStatusError) and 500 <= exception.response.status_code < 600
-    )
+    if isinstance(exception, httpx.HTTPStatusError):
+        status = exception.response.status_code
+        return 500 <= status < 600
+
+    return False
 
 
 class LLMClient(ABC):
@@ -182,3 +184,6 @@ class LLMClient(ABC):
         else:
             log += 'No raw output available'
         return log
+
+
+_RATE_LIMIT_OR_JSON_ERROR = (RateLimitError, json.decoder.JSONDecodeError)
