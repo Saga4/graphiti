@@ -15,7 +15,6 @@ limitations under the License.
 """
 
 import logging
-from collections import defaultdict
 from time import time
 from typing import Any
 
@@ -907,17 +906,19 @@ async def get_edge_invalidation_candidates(
 
 # takes in a list of rankings of uuids
 def rrf(results: list[list[str]], rank_const=1, min_score: float = 0) -> list[str]:
-    scores: dict[str, float] = defaultdict(float)
+    scores: dict[str, float] = {}
     for result in results:
         for i, uuid in enumerate(result):
-            scores[uuid] += 1 / (i + rank_const)
+            scores[uuid] = scores.get(uuid, 0.0) + 1 / (i + rank_const)
 
-    scored_uuids = [term for term in scores.items()]
-    scored_uuids.sort(reverse=True, key=lambda term: term[1])
+    # Create a list of (uuid, score) tuples that meet the min_score
+    filtered_scores = [(uuid, score) for uuid, score in scores.items() if score >= min_score]
 
-    sorted_uuids = [term[0] for term in scored_uuids]
+    # Sort tuples in-place by score, descending
+    filtered_scores.sort(key=lambda x: x[1], reverse=True)
 
-    return [uuid for uuid in sorted_uuids if scores[uuid] >= min_score]
+    # Return only the uuid values, in sorted order
+    return [uuid for uuid, _ in filtered_scores]
 
 
 async def node_distance_reranker(
