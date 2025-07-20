@@ -158,13 +158,37 @@ class FalkorDriver(GraphDriver):
 
 
 def convert_datetimes_to_strings(obj):
-    if isinstance(obj, dict):
-        return {k: convert_datetimes_to_strings(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_datetimes_to_strings(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(convert_datetimes_to_strings(item) for item in obj)
-    elif isinstance(obj, datetime):
+    _isinstance = isinstance
+    _datetime = datetime
+    # fast path for datetime itself
+    if _isinstance(obj, _datetime):
         return obj.isoformat()
-    else:
-        return obj
+
+    # fast path for dicts
+    if _isinstance(obj, dict):
+        # Use comprehension mapping directly
+        # Micro-optimization: don't rebind name in lambda, just inline
+        return {k: convert_datetimes_to_strings(v) for k, v in obj.items()}
+
+    # fast path for lists
+    if _isinstance(obj, list):
+        # Only create new list if any member actually changes, i.e., is a datetime or nested
+        # But for speed, we still build a new list
+        return [convert_datetimes_to_strings(item) for item in obj]
+
+    # fast path for tuples
+    if _isinstance(obj, tuple):
+        # For memory optimization, check if any item was changed, else return the original tuple
+        new_items = []
+        changed = False
+        for item in obj:
+            conv = convert_datetimes_to_strings(item)
+            if conv is not item:
+                changed = True
+            new_items.append(conv)
+        if not changed:
+            return obj
+        return tuple(new_items)
+
+    # fallback: non-collection and non-datetime, return as is
+    return obj
