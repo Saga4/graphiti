@@ -53,15 +53,13 @@ class SearchFilters(BaseModel):
 def node_search_filter_query_constructor(
     filters: SearchFilters,
 ) -> tuple[str, dict[str, Any]]:
-    filter_query: str = ''
-    filter_params: dict[str, Any] = {}
-
+    # Only allocate new objects when needed
     if filters.node_labels is not None:
-        node_labels = '|'.join(filters.node_labels)
-        node_label_filter = ' AND n:' + node_labels
-        filter_query += node_label_filter
-
-    return filter_query, filter_params
+        # Fast join and string concat, construct and return directly
+        filter_query = ' AND n:' + '|'.join(filters.node_labels)
+        return filter_query, {}
+    # Fast path for no filters
+    return '', {}
 
 
 def edge_search_filter_query_constructor(
