@@ -21,8 +21,12 @@ from graphiti_core.search.search_config import SearchResults
 
 
 def format_edge_date_range(edge: EntityEdge) -> str:
-    # return f"{datetime(edge.valid_at).strftime('%Y-%m-%d %H:%M:%S') if edge.valid_at else 'date unknown'} - {(edge.invalid_at.strftime('%Y-%m-%d %H:%M:%S') if edge.invalid_at else 'present')}"
-    return f'{edge.valid_at if edge.valid_at else "date unknown"} - {(edge.invalid_at if edge.invalid_at else "present")}'
+    # Format date range string using cached attribute access for efficiency
+    valid = edge.valid_at
+    invalid = edge.invalid_at
+    return (
+        (str(valid) if valid else 'date unknown') + ' - ' + (str(invalid) if invalid else 'present')
+    )
 
 
 def search_results_to_context_string(search_results: SearchResults) -> str:
