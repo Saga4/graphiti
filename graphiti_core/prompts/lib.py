@@ -72,8 +72,10 @@ class VersionWrapper:
 
     def __call__(self, context: dict[str, Any]) -> list[Message]:
         messages = self.func(context)
+        dneu = DO_NOT_ESCAPE_UNICODE  # Local variable for faster access
         for message in messages:
-            message.content += DO_NOT_ESCAPE_UNICODE if message.role == 'system' else ''
+            if message.role == 'system':
+                message.content += dneu
         return messages
 
 
