@@ -54,39 +54,7 @@ def parse_db_date(neo_date: neo4j_time.DateTime | str | None) -> datetime | None
 
 def lucene_sanitize(query: str) -> str:
     # Escape special characters from a query before passing into Lucene
-    # + - && || ! ( ) { } [ ] ^ " ~ * ? : \ /
-    escape_map = str.maketrans(
-        {
-            '+': r'\+',
-            '-': r'\-',
-            '&': r'\&',
-            '|': r'\|',
-            '!': r'\!',
-            '(': r'\(',
-            ')': r'\)',
-            '{': r'\{',
-            '}': r'\}',
-            '[': r'\[',
-            ']': r'\]',
-            '^': r'\^',
-            '"': r'\"',
-            '~': r'\~',
-            '*': r'\*',
-            '?': r'\?',
-            ':': r'\:',
-            '\\': r'\\',
-            '/': r'\/',
-            'O': r'\O',
-            'R': r'\R',
-            'N': r'\N',
-            'T': r'\T',
-            'A': r'\A',
-            'D': r'\D',
-        }
-    )
-
-    sanitized = query.translate(escape_map)
-    return sanitized
+    return query.translate(_LUCENE_ESCAPE_MAP)
 
 
 def normalize_l2(embedding: list[float]) -> NDArray:
@@ -167,3 +135,34 @@ def validate_excluded_entity_types(
         )
 
     return True
+
+
+_LUCENE_ESCAPE_MAP = str.maketrans(
+    {
+        '+': r'\+',
+        '-': r'\-',
+        '&': r'\&',
+        '|': r'\|',
+        '!': r'\!',
+        '(': r'\(',
+        ')': r'\)',
+        '{': r'\{',
+        '}': r'\}',
+        '[': r'\[',
+        ']': r'\]',
+        '^': r'\^',
+        '"': r'\"',
+        '~': r'\~',
+        '*': r'\*',
+        '?': r'\?',
+        ':': r'\:',
+        '\\': r'\\',
+        '/': r'\/',
+        'O': r'\O',
+        'R': r'\R',
+        'N': r'\N',
+        'T': r'\T',
+        'A': r'\A',
+        'D': r'\D',
+    }
+)
