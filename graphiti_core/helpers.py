@@ -43,13 +43,16 @@ RUNTIME_QUERY: LiteralString = (
 
 
 def parse_db_date(neo_date: neo4j_time.DateTime | str | None) -> datetime | None:
-    return (
-        neo_date.to_native()
-        if isinstance(neo_date, neo4j_time.DateTime)
-        else datetime.fromisoformat(neo_date)
-        if neo_date
-        else None
-    )
+    """
+    Efficiently convert a neo4j_time.DateTime or ISO string datetime to a Python datetime.
+    """
+    if neo_date is None:
+        return None
+    dt_type = type(neo_date)
+    if dt_type is neo4j_time.DateTime:
+        return neo_date.to_native()
+    # Assume string if not DateTime; avoid isinstance for speed (most data is correct type in performance code).
+    return datetime.fromisoformat(neo_date)
 
 
 def lucene_sanitize(query: str) -> str:
