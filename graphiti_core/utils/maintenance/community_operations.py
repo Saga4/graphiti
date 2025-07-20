@@ -82,43 +82,55 @@ def label_propagation(projection: dict[str, list[Neighbor]]) -> list[list[str]]:
     # 4. Continue until no communities change during propagation
 
     community_map = {uuid: i for i, uuid in enumerate(projection.keys())}
+    node_uuids = list(projection.keys())
 
     while True:
         no_change = True
-        new_community_map: dict[str, int] = {}
 
-        for uuid, neighbors in projection.items():
+        # Reuse the same dict to avoid dict allocations (since all uuids are always present)
+        new_community_map = community_map.copy()
+
+        for uuid in node_uuids:
             curr_community = community_map[uuid]
+            neighbors = projection[uuid]
+            # Fast array for community counts
+            community_candidates = {}
 
-            community_candidates: dict[int, int] = defaultdict(int)
             for neighbor in neighbors:
-                community_candidates[community_map[neighbor.node_uuid]] += neighbor.edge_count
-            community_lst = [
-                (count, community) for community, count in community_candidates.items()
-            ]
+                neighbor_community = community_map[neighbor.node_uuid]
+                community_candidates[neighbor_community] = (
+                    community_candidates.get(neighbor_community, 0) + neighbor.edge_count
+                )
 
-            community_lst.sort(reverse=True)
-            candidate_rank, community_candidate = community_lst[0] if community_lst else (0, -1)
-            if community_candidate != -1 and candidate_rank > 1:
-                new_community = community_candidate
+            # Find the "plurality" (largest edge_count, tie to largest community id)
+            best_count = -1
+            best_community = -1
+            for comm, count in community_candidates.items():
+                if (count > best_count) or (count == best_count and comm > best_community):
+                    best_count = count
+                    best_community = comm
+
+            # Decide new community (same if no neighbors)
+            if best_community != -1 and best_count > 1:
+                new_community = best_community
             else:
-                new_community = max(community_candidate, curr_community)
-
-            new_community_map[uuid] = new_community
+                new_community = (
+                    curr_community if curr_community > best_community else best_community
+                )
 
             if new_community != curr_community:
+                new_community_map[uuid] = new_community
                 no_change = False
 
         if no_change:
             break
-
         community_map = new_community_map
 
     community_cluster_map = defaultdict(list)
     for uuid, community in community_map.items():
         community_cluster_map[community].append(uuid)
 
-    clusters = [cluster for cluster in community_cluster_map.values()]
+    clusters = list(community_cluster_map.values())
     return clusters
 
 
