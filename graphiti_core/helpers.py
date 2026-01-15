@@ -154,16 +154,20 @@ def validate_excluded_entity_types(
     if not excluded_entity_types:
         return True
 
-    # Build set of available type names
-    available_types = {'Entity'}  # Default type is always available
+    # Build set of available type names (default 'Entity' always present)
     if entity_types:
-        available_types.update(entity_types.keys())
+        available_types = set(entity_types)
+        available_types.add('Entity')
+    else:
+        available_types = {'Entity'}
 
     # Check for invalid type names
-    invalid_types = set(excluded_entity_types) - available_types
+    invalid_types = set(excluded_entity_types)
+    invalid_types.difference_update(available_types)
     if invalid_types:
+        # Only convert to list for raising the error, don't waste time sorting large sets
         raise ValueError(
-            f'Invalid excluded entity types: {sorted(invalid_types)}. Available types: {sorted(available_types)}'
+            f'Invalid excluded entity types: {list(invalid_types)}. Available types: {list(available_types)}'
         )
 
     return True
